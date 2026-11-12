@@ -93,7 +93,7 @@ const { downscaled } = await sketchToSqraft(sketchBytes, { downscale: { resize: 
 
 | Sketch | Sqraft | 说明 |
 |---|---|---|
-| 页面 | （无） | Sqraft 只有一块无限画布：各 Sketch 页面的内容按原相对位置**纵向排开** |
+| 页面 | （无） + `manifest.json` 的 `sections` | Sqraft 只有一块无限画布：各 Sketch 页面的内容按原相对位置**纵向排开**；页面名称与其中的画板写进 `manifest.json` 的 `sections`（`[{ name, pageIds }]`，按 Sketch 里的顺序），Sqraft 私有云据此按组浏览，桌面端忽略这个字段 |
 | 画板 Artboard / Frame（Sketch 2025+） | 页面 Page | 背景色（Frame 为填充）→ 页面填充 |
 | 画板外的散图层 | 透明小页面 | 按相距 200 px 以内就近分簇，每簇一个贴身的透明页面，排在画板之前绘制（提示 `layer.loose`） |
 | 嵌套画板 / Frame | 画板 Frame | 裁剪内容；带填充 / 描边 / 阴影；`clippingBehavior` 设为裁剪的分组同样转成画板 |

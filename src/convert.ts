@@ -68,10 +68,17 @@ export interface ConvertReport {
   warnings: WarningSummary[];
 }
 
+/** 页面分组：一个 Sketch 页面一组，按 Sketch 里的页面顺序；组内按画板顺序。写进 manifest.json，看稿时按组浏览。 */
+export interface PageSection {
+  name: string;
+  pageIds: string[];
+}
+
 export interface ConvertResult {
   state: DocState;
   assets: AssetEntry[];
   report: ConvertReport;
+  sections: PageSection[];
 }
 
 export interface ConvertOptions {
@@ -667,7 +674,8 @@ function wrapGroup(ctx: Context, mask: DocNode, children: IrNode[]): IrNode {
 // ───────────────────────── 顶层：页面与主组件 ─────────────────────────
 
 interface TopLevel {
-  pages: Array<{ ir: IrNode; group: string }>;
+  /** source：来自哪个 Sketch 页面（按对象区分，Sketch 允许页面重名） */
+  pages: Array<{ ir: IrNode; group: string; source?: object }>;
   components: Array<{ ir: IrNode; deps: Set<string>; symbolId: string; group: string }>;
 }
 
@@ -821,7 +829,7 @@ function convertPages(ctx: Context, pages: SketchPage[], foreign: SketchLayer[])
       if (layer.isLocked) ctx.locked.add(node.id);
       const fill = artboardFill(ctx, layer);
       if (fill) node.style.fill = fill;
-      top.pages.push({ ir: { node, children: convertChildren(ctx, layer.layers) }, group: page.name ?? "" });
+      top.pages.push({ ir: { node, children: convertChildren(ctx, layer.layers) }, group: page.name ?? "", source: page });
     }
     if (loose.length) {
       ctx.warn("layer.loose", page.name);
@@ -845,7 +853,7 @@ function convertPages(ctx: Context, pages: SketchPage[], foreign: SketchLayer[])
           c.node.x = round(c.node.x - bounds.x);
           c.node.y = round(c.node.y - bounds.y);
         }
-        loosePages.push({ ir: { node, children }, group: page.name ?? "" });
+        loosePages.push({ ir: { node, children }, group: page.name ?? "", source: page });
       });
       // 排在本页画板之前：根节点按顺序绘制，散图层页面即使与画板重叠也不会盖住画板
       top.pages.splice(pageStart, 0, ...loosePages);
@@ -1284,8 +1292,20 @@ export async function convertSketch(archive: SketchArchive, options: ConvertOpti
 
   // 不做 `snapshot()` 深拷贝：这份状态只属于本次转换，大稿深拷贝要好几秒
   const state = store.doc;
+  // 一个 Sketch 页面一组：按页面对象区分，同名的不同页面不会被并成一组（组名重复由使用方处理）
+  const sections: PageSection[] = [];
+  let lastSource: object | undefined;
+  for (const p of top.pages) {
+    const id = p.ir.node.id;
+    if (state.nodes[id]?.type !== "page") continue;
+    const last = sections[sections.length - 1];
+    if (last && p.source === lastSource) last.pageIds.push(id);
+    else sections.push({ name: p.group, pageIds: [id] });
+    lastSource = p.source;
+  }
   return {
     state,
+    sections,
     assets: [...ctx.assets.values()],
     report: {
       ...countNodes(state),

@@ -4,6 +4,7 @@ export type {
   ConvertOptions,
   ConvertReport,
   ConvertResult,
+  PageSection,
   ProgressEvent,
   ProgressStage,
   WarningSummary,
@@ -36,5 +37,5 @@ export async function sketchToSqraft(
     ({ assets, downscaled } = await downscaleImages(result.state, assets, options.downscale, options.onProgress));
   }
   options.onProgress?.({ kind: "stage", stage: "pack" });
-  return { bytes: writeSqraft(result.state, assets), report: result.report, downscaled };
+  return { bytes: writeSqraft(result.state, assets, undefined, result.sections), report: result.report, downscaled };
 }

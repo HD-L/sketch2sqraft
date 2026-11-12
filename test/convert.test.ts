@@ -316,6 +316,28 @@ describe("页面排布与文件", () => {
     expect(report.warnings.map((w) => w.code)).toContain("layer.loose");
   });
 
+  it("按 Sketch 页面分组输出 sections，并写进 manifest.json", async () => {
+    const p1 = { name: "v4.3.2", layers: [layer("artboard", [0, 0, 100, 100], { name: "A1" }), layer("artboard", [200, 0, 100, 100], { name: "A2" })] };
+    const p2 = { name: "v4.3.0", layers: [layer("artboard", [0, 0, 100, 100], { name: "B1" })] };
+    const result = await convertSketch(buildSketch([p1, p2]));
+    expect(result.sections).toEqual([
+      { name: "v4.3.2", pageIds: [byName(result.state, "A1").id, byName(result.state, "A2").id] },
+      { name: "v4.3.0", pageIds: [byName(result.state, "B1").id] },
+    ]);
+    // 同名的两个 Sketch 页面挨在一起，仍是两组
+    const dup = await convertSketch(buildSketch([p2, { ...p2, layers: [layer("artboard", [0, 0, 100, 100], { name: "B2" })] }]));
+    expect(dup.sections.map((s) => [s.name, s.pageIds.length])).toEqual([
+      ["v4.3.0", 1],
+      ["v4.3.0", 1],
+    ]);
+    const { bytes } = await sketchToSqraft(zipSketch(buildSketch([p1, p2])));
+    const manifest = JSON.parse(strFromU8(unzipSync(bytes)["manifest.json"]));
+    expect(manifest.sections.map((s: { name: string; pageIds: string[] }) => [s.name, s.pageIds.length])).toEqual([
+      ["v4.3.2", 2],
+      ["v4.3.0", 1],
+    ]);
+  });
+
   it("散图层就近分簇成透明小页面，排在画板之前，不会撑出盖住画板的大白板", async () => {
     const t = (name: string, x: number, y: number) => layer("text", [x, y, 80, 20], { name, attributedString: { string: name, attributes: [] } });
     const { state } = await convertSketch(

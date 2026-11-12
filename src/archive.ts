@@ -7,7 +7,7 @@
 
 import { strToU8, unzipSync, zipSync, type Zippable } from "fflate";
 import { CURRENT_FORMAT_VERSION, type DocState } from "@sqraft/core";
-import type { AssetEntry } from "./convert";
+import type { AssetEntry, PageSection } from "./convert";
 import type { SketchArchive } from "./sketch";
 
 export function readSketchArchive(bytes: Uint8Array): SketchArchive {
@@ -22,10 +22,24 @@ export function readSketchArchive(bytes: Uint8Array): SketchArchive {
   return files;
 }
 
-export function writeSqraft(state: DocState, assets: readonly AssetEntry[], appVersion = "sketch-import"): Uint8Array {
+/**
+ * `sections`（可选）写进 manifest.json：页面按 Sketch 页面分组。Sqraft 桌面端不读这个字段，
+ * Sqraft 私有云用它在看稿时按组浏览。
+ */
+export function writeSqraft(
+  state: DocState,
+  assets: readonly AssetEntry[],
+  appVersion = "sketch-import",
+  sections?: readonly PageSection[],
+): Uint8Array {
   const files: Zippable = {
     "manifest.json": strToU8(
-      JSON.stringify({ formatVersion: state.formatVersion ?? CURRENT_FORMAT_VERSION, app: "sqraft", version: appVersion }),
+      JSON.stringify({
+        formatVersion: state.formatVersion ?? CURRENT_FORMAT_VERSION,
+        app: "sqraft",
+        version: appVersion,
+        ...(sections?.length ? { sections } : {}),
+      }),
     ),
     // 大稿的 doc.json 能到几百 MB：level 1 比默认 level 6 快一倍，体积只大约一成
     "doc.json": [strToU8(JSON.stringify(state)), { level: 1 }],
