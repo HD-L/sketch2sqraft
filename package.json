@@ -1,0 +1,40 @@
+{
+  "name": "sketch2sqraft",
+  "version": "0.1.0",
+  "description": "把 Sketch 设计稿（.sketch）转换成 Sqraft 文档（.sqraft）的命令行工具",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/HD-L/sketch2sqraft.git"
+  },
+  "homepage": "https://github.com/HD-L/sketch2sqraft",
+  "type": "module",
+  "exports": "./src/index.ts",
+  "types": "./src/index.ts",
+  "bin": {
+    "sketch2sqraft": "./dist/sketch2sqraft.mjs"
+  },
+  "packageManager": "pnpm@10.33.4",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json && pnpm run bundle",
+    "bundle": "esbuild src/cli.ts --bundle --platform=node --format=esm --target=node22 '--banner:js=#!/usr/bin/env node' --external:sharp --outfile=dist/sketch2sqraft.mjs --log-level=warning",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@sqraft/core": "github:wfdx165/sqraft#6e2732f33501f61715562d90065ec162728a8eef&path:packages/core",
+    "fflate": "0.8.3"
+  },
+  "optionalDependencies": {
+    "sharp": "0.33.5"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.5",
+    "esbuild": "0.25.12",
+    "typescript": "5.9.3",
+    "vitest": "2.1.9"
+  }
+}

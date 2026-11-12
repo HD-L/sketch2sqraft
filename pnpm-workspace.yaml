@@ -1,0 +1,6 @@
+# 单包仓库：这里只放 pnpm 设置
+onlyBuiltDependencies:
+  - esbuild
+# sharp 自带预编译二进制，不需要跑安装脚本
+ignoredBuiltDependencies:
+  - sharp

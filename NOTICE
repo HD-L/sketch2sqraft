@@ -1,0 +1,27 @@
+sketch2sqraft
+Copyright 2026 the sketch2sqraft contributors
+
+This product is licensed under the Apache License, Version 2.0.
+See the LICENSE file for the full text.
+
+sketch2sqraft is an independent tool and is not an official part of Sqraft.
+"Sqraft" is used only to describe the file format it converts to.
+
+The bundled command-line build (dist/sketch2sqraft.mjs) includes @sqraft/core
+from the Sqraft project (https://github.com/wfdx165/sqraft), whose NOTICE reads:
+
+---
+Sqraft
+Copyright 2026 Wang Fangda
+
+This product is licensed under the Apache License, Version 2.0.
+See the LICENSE file for the full text.
+
+The "Sqraft" name and the Sqraft application icon are not licensed
+under the Apache License, Version 2.0 (Section 6, "Trademarks").
+Forks and redistributions must use a different name and a different
+icon.
+
+Third-party components and their license texts are listed in
+apps/desktop/build/third-party-licenses.txt.
+---
