@@ -316,6 +316,30 @@ describe("页面排布与文件", () => {
     expect(report.warnings.map((w) => w.code)).toContain("layer.loose");
   });
 
+  it("散图层就近分簇成透明小页面，排在画板之前，不会撑出盖住画板的大白板", async () => {
+    const t = (name: string, x: number, y: number) => layer("text", [x, y, 80, 20], { name, attributedString: { string: name, attributes: [] } });
+    const { state } = await convertSketch(
+      buildSketch([
+        {
+          name: "P",
+          layers: [
+            t("NoteA1", -300, 0),
+            layer("artboard", [0, 0, 375, 812], { name: "Screen" }),
+            t("NoteA2", -300, 40),
+            t("NoteFar", 20000, 30000),
+          ],
+        },
+      ]),
+    );
+    const pages = state.rootIds.map((id) => state.nodes[id]).filter((n) => n.type === "page");
+    expect(pages.map((n) => n.name)).toEqual(["P / 散图层 1", "P / 散图层 2", "Screen"]);
+    const [near, far] = pages;
+    expect([near.width, near.height]).toEqual([80, 60]);
+    expect([far.width, far.height]).toEqual([80, 20]);
+    expect(near.style.fill).toEqual({ value: "#ffffff00" });
+    expect(childrenOf(state, near.id).map((n) => n.name)).toEqual(["NoteA1", "NoteA2"]);
+  });
+
   it("--page 只转换指定页面，但仍保留其它页面上的母版", async () => {
     const symbolID = uid("SYM");
     const master = layer("symbolMaster", [0, 0, 10, 10], { name: "Icon", symbolID });

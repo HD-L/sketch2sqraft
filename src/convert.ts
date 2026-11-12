@@ -710,6 +710,36 @@ function layerBounds(layers: SketchLayer[]): Rect | null {
   return { x: x1, y: y1, width: x2 - x1, height: y2 - y1 };
 }
 
+/** 散图层分簇的间距：包围盒相距不超过这么多（px）的归入同一簇 */
+const LOOSE_GAP = 200;
+
+/** 按包围盒就近分簇（并查集），簇内保持原图层顺序，簇按首个图层的顺序排列。 */
+function clusterLayers(layers: SketchLayer[], gap: number): SketchLayer[][] {
+  const rects = layers.map(frameOf);
+  const parent = layers.map((_, i) => i);
+  const find = (i: number): number => (parent[i] === i ? i : (parent[i] = find(parent[i])));
+  const order = rects.map((_, i) => i).sort((a, b) => rects[a].x - rects[b].x);
+  // 按 x 扫描：只和左边界落在 [x, right + gap] 内的图层比较
+  for (let a = 0; a < order.length; a++) {
+    const i = order[a];
+    const ri = rects[i];
+    for (let b = a + 1; b < order.length; b++) {
+      const j = order[b];
+      const rj = rects[j];
+      if (rj.x > ri.x + ri.width + gap) break;
+      if (rj.y <= ri.y + ri.height + gap && ri.y <= rj.y + rj.height + gap) parent[find(j)] = find(i);
+    }
+  }
+  const groups = new Map<number, SketchLayer[]>();
+  layers.forEach((l, i) => {
+    const r = find(i);
+    const g = groups.get(r);
+    if (g) g.push(l);
+    else groups.set(r, [l]);
+  });
+  return [...groups.values()];
+}
+
 /**
  * Sketch 有多张页面，每张一块独立画布；Sqraft 只有一块无限画布。
  * 把各页内容纵向排开（保持页内相对位置），画板 → 页面，母版 → 根上的主组件。
@@ -768,6 +798,7 @@ function convertPages(ctx: Context, pages: SketchPage[], foreign: SketchLayer[])
 
   // 页面
   for (const { page, dx, dy } of placements) {
+    const pageStart = top.pages.length;
     const loose: SketchLayer[] = [];
     for (const layer of page.layers ?? []) {
       if (SKIPPED_CLASSES.has(layer._class) || layer._class === "symbolMaster") continue;
@@ -794,22 +825,30 @@ function convertPages(ctx: Context, pages: SketchPage[], foreign: SketchLayer[])
     }
     if (loose.length) {
       ctx.warn("layer.loose", page.name);
-      const bounds = layerBounds(loose)!;
-      const node = createNode("page", {
-        id: ctx.allocId(page.do_objectID, "~loose"),
-        name: page.name ?? "Page",
-        x: round(bounds.x + dx),
-        y: round(bounds.y + dy),
-        width: Math.max(1, round(bounds.width)),
-        height: Math.max(1, round(bounds.height)),
-        style: {},
+      // 散图层（多是画板旁的标注文字）按空间就近分簇，每簇一个贴身的透明页面。
+      // 不能整页一个大包围盒：页面缺省白底，散在画板四周的图层会撑出一张盖住画板的大白板。
+      const clusters = clusterLayers(loose, LOOSE_GAP);
+      const loosePages: TopLevel["pages"] = [];
+      clusters.forEach((cluster, i) => {
+        const bounds = layerBounds(cluster)!;
+        const node = createNode("page", {
+          id: ctx.allocId(page.do_objectID, i === 0 ? "~loose" : `~loose${i + 1}`),
+          name: clusters.length === 1 ? (page.name ?? "Page") : `${page.name ?? "Page"} / 散图层 ${i + 1}`,
+          x: round(bounds.x + dx),
+          y: round(bounds.y + dy),
+          width: Math.max(1, round(bounds.width)),
+          height: Math.max(1, round(bounds.height)),
+          style: { fill: { value: "#ffffff00" } },
+        });
+        const children = convertChildren(ctx, cluster);
+        for (const c of children) {
+          c.node.x = round(c.node.x - bounds.x);
+          c.node.y = round(c.node.y - bounds.y);
+        }
+        loosePages.push({ ir: { node, children }, group: page.name ?? "" });
       });
-      const children = convertChildren(ctx, loose);
-      for (const c of children) {
-        c.node.x = round(c.node.x - bounds.x);
-        c.node.y = round(c.node.y - bounds.y);
-      }
-      top.pages.push({ ir: { node, children }, group: page.name ?? "" });
+      // 排在本页画板之前：根节点按顺序绘制，散图层页面即使与画板重叠也不会盖住画板
+      top.pages.splice(pageStart, 0, ...loosePages);
     }
   }
   return top;

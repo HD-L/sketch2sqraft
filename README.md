@@ -95,7 +95,7 @@ const { downscaled } = await sketchToSqraft(sketchBytes, { downscale: { resize: 
 |---|---|---|
 | 页面 | （无） | Sqraft 只有一块无限画布：各 Sketch 页面的内容按原相对位置**纵向排开** |
 | 画板 Artboard / Frame（Sketch 2025+） | 页面 Page | 背景色（Frame 为填充）→ 页面填充 |
-| 画板外的散图层 | 新页面 | 以散图层包围盒建一个页面收纳（提示 `layer.loose`） |
+| 画板外的散图层 | 透明小页面 | 按相距 200 px 以内就近分簇，每簇一个贴身的透明页面，排在画板之前绘制（提示 `layer.loose`） |
 | 嵌套画板 / Frame | 画板 Frame | 裁剪内容；带填充 / 描边 / 阴影；`clippingBehavior` 设为裁剪的分组同样转成画板 |
 | 组件母版 Symbol Master | 主组件（文档根） | 含外部库组件（`foreignSymbols`）；按依赖拓扑序建立 |
 | 实例 Symbol Instance | 实例 | 物化子树；尺寸不同时按 Sketch 的 `resizingConstraint` 换算子图层 |
